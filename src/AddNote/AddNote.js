@@ -12,36 +12,83 @@ export default class AddNote extends Component {
   }
   static contextType = ApiContext;
 
+  state = {
+    name: '',
+    content:'',
+    folder_id:'',
+    nameError:false,
+    contentError:false
+  }
+
   handleSubmit = e => {
     e.preventDefault()
-    const newNote = {
-      name: e.target['note-name'].value,
-      content: e.target['note-content'].value,
-      folder_id: e.target['note-folder-id'].value,
-      modified: new Date(),
+    if(this.state.name.length > 0){
+      if(this.state.content.length > 0){
+        const newNote = {
+          name: e.target['note-name'].value,
+          content: e.target['note-content'].value,
+          folder_id: e.target['note-folder-id'].value,
+          modified: new Date(),
+        }
+        fetch(`${config.API_ENDPOINT}/api/notes`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify(newNote),
+        })
+          .then(res => {
+            if (!res.ok)
+              return res.json().then(e => Promise.reject(e))
+            return res.json()
+          })
+          .then(note => {
+            this.context.addNote(note)
+            this.props.history.push(`/folder/${note.folder_id}`)
+          })
+          .catch(error => {
+            console.error({ error })
+          })
+      } else {
+        this.setState({contentError:true})
+      }
+    } else {
+      this.setState({nameError:true})
     }
-    fetch(`${config.API_ENDPOINT}/api/notes`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(newNote),
-    })
-      .then(res => {
-        if (!res.ok)
-          return res.json().then(e => Promise.reject(e))
-        return res.json()
-      })
-      .then(note => {
-        this.context.addNote(note)
-        this.props.history.push(`/folder/${note.folder_id}`)
-      })
-      .catch(error => {
-        console.error({ error })
-      })
+    
+  }
+
+  handleNameChange = (e) => {
+    this.setState({name:e.currentTarget.value})
+  }
+
+  handleContentChange = (e) => {
+    this.setState({content:e.currentTarget.value})
   }
 
   render() {
+    let nameInput ='';
+    let contentInput='';
+    if(this.state.nameError){
+      nameInput =
+        <div>
+          <input onChange={this.handleNameChange} className='error-message' type='text' id='note-name-input' name='note-name' />
+          <p>Enter a name</p>
+        </div>
+    } else {
+      nameInput =
+        <input onChange={this.handleNameChange} type='text' id='note-name-input' name='note-name' />
+    }
+    if(this.state.contentError){
+      contentInput = 
+      <div>
+        <textarea onChange={this.handleContentChange} className='error-message' id='note-content-input' name='note-content' />
+        <p>Enter Content</p>
+      </div>
+    } else {
+      contentInput = 
+        <textarea onChange={this.handleContentChange} id='note-content-input' name='note-content' />
+    }
     const { folders=[] } = this.context
     return (
       <section className='AddNote'>
@@ -51,13 +98,13 @@ export default class AddNote extends Component {
             <label htmlFor='note-name-input'>
               Name
             </label>
-            <input type='text' id='note-name-input' name='note-name' />
+            {nameInput}
           </div>
           <div className='field'>
             <label htmlFor='note-content-input'>
               Content
             </label>
-            <textarea id='note-content-input' name='note-content' />
+            {contentInput}
           </div>
           <div className='field'>
             <label htmlFor='note-folder-select'>
